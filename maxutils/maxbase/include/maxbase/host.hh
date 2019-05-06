@@ -108,4 +108,14 @@ inline bool operator!=(const Host& l, const Host& r)
 {
     return !(l == r);
 }
+
+/**
+ * Perform reverse DNS on an IP address. This may involve network communication so can be slow.
+ *
+ * @param ip IP to convert to hostname
+ * @param output Where to write the output. Nothing is written if operation fails.
+ * @return True on success
+ */
+bool reverse_dns(const std::string& ip, std::string* output);
+
 }
