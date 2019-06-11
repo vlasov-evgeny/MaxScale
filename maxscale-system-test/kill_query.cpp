@@ -12,7 +12,7 @@ int main(int argc, char* argv[])
     conn.connect();
     conn.query("CREATE OR REPLACE TABLE test.t1 (id LONGTEXT)");
 
-    for (int x = 0; x < 10; x++)
+    for (int x = 0; x < 50; x++)
     {
         conn.query("INSERT INTO test.t1 VALUES (REPEAT('a', 5000000))");
     }
@@ -38,6 +38,7 @@ int main(int argc, char* argv[])
                             expected, a.error());
             });
 
+        sleep(5);
         test.expect(b.query("KILL QUERY " + std::to_string(id)), "KILL QUERY failed: %s", b.error());
         thr.join();
 
