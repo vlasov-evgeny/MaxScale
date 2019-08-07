@@ -590,44 +590,41 @@ int main(int argc, char* argv[])
     TestConnections::require_repl_version("10.3.3"); // At this version semisync is built-in
     TestConnections test(argc, argv);
 
-    auto foreach_backend_query = [&test](const string& query)
+    auto foreach_backend = [&test](std::function<void(int node)> func)
     {
         const auto N = test.repl->N;
         for (int i = 0; i < N; i++)
         {
-            test.try_query(test.repl->nodes[i], "%s", query.c_str());
+            func(i);
         }
     };
 
-    auto foreach_slave_backend_query = [&test](const string& query)
-    {
-        const auto N = test.repl->N;
-        int master_id = get_master_server_id(test);
-        for (int i = 0; i < N; i++)
-        {
-            int id = test.repl->get_server_id(i);
-            if (id != master_id)
-            {
-                test.try_query(test.repl->nodes[i], "%s", query.c_str());
-            }
-        }
+    // Activate semicync replication on all backends. This must be done in config files since runtime
+    // settings are lost on server reboot, which the test performs.
+    auto stop = [&test](int node) {
+        test.repl->stop_node(node);
+    };
+    auto enable_semisync = [&test](int node) {
+        test.repl->stash_server_settings(node);
+        test.repl->add_server_setting(node, "rpl_semi_sync_master_enabled=ON");
+        test.repl->add_server_setting(node, "rpl_semi_sync_slave_enabled=ON");
+    };
+    auto restore_settings = [&test](int node) {
+        test.repl->restore_server_settings(node);
+    };
+    auto start = [&test](int node) {
+        test.repl->start_node(node);
     };
 
-    // Activate semicync replication on all backends. Stop slaves, enable settings, start slaves.
-    test.repl->connect();
-    foreach_slave_backend_query("STOP SLAVE");
-    foreach_backend_query("SET GLOBAL rpl_semi_sync_master_enabled=ON;");
-    foreach_backend_query("SET GLOBAL rpl_semi_sync_slave_enabled=ON;");
-    foreach_slave_backend_query("START SLAVE");
+    foreach_backend(stop);
+    foreach_backend(enable_semisync);
+    foreach_backend(start);
 
     run(test);
 
-    // Disable semisync.
-    test.repl->connect();
-    foreach_slave_backend_query("STOP SLAVE");
-    foreach_backend_query("SET GLOBAL rpl_semi_sync_master_enabled=OFF;");
-    foreach_backend_query("SET GLOBAL rpl_semi_sync_slave_enabled=OFF;");
-    foreach_slave_backend_query("START SLAVE");
+    foreach_backend(stop);
+    foreach_backend(restore_settings);
+    foreach_backend(start);
 
     return test.global_result;
 }
