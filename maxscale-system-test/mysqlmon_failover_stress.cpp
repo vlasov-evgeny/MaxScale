@@ -587,9 +587,47 @@ void run(TestConnections& test)
 int main(int argc, char* argv[])
 {
     Mariadb_nodes::require_gtid(true);
+    TestConnections::require_repl_version("10.3.3"); // At this version semisync is built-in
     TestConnections test(argc, argv);
 
+    auto foreach_backend_query = [&test](const string& query)
+    {
+        const auto N = test.repl->N;
+        for (int i = 0; i < N; i++)
+        {
+            test.try_query(test.repl->nodes[i], "%s", query.c_str());
+        }
+    };
+
+    auto foreach_slave_backend_query = [&test](const string& query)
+    {
+        const auto N = test.repl->N;
+        int master_id = get_master_server_id(test);
+        for (int i = 0; i < N; i++)
+        {
+            int id = test.repl->get_server_id(i);
+            if (id != master_id)
+            {
+                test.try_query(test.repl->nodes[i], "%s", query.c_str());
+            }
+        }
+    };
+
+    // Activate semicync replication on all backends. Stop slaves, enable settings, start slaves.
+    test.repl->connect();
+    foreach_slave_backend_query("STOP SLAVE");
+    foreach_backend_query("SET GLOBAL rpl_semi_sync_master_enabled=ON;");
+    foreach_backend_query("SET GLOBAL rpl_semi_sync_slave_enabled=ON;");
+    foreach_slave_backend_query("START SLAVE");
+
     run(test);
+
+    // Disable semisync.
+    test.repl->connect();
+    foreach_slave_backend_query("STOP SLAVE");
+    foreach_backend_query("SET GLOBAL rpl_semi_sync_master_enabled=OFF;");
+    foreach_backend_query("SET GLOBAL rpl_semi_sync_slave_enabled=OFF;");
+    foreach_slave_backend_query("START SLAVE");
 
     return test.global_result;
 }
