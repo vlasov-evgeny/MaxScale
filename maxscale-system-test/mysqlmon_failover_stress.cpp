@@ -534,17 +534,17 @@ void run(TestConnections& test)
         Client::start(test.verbose, zHost, port, zUser, zPassword);
 
         list_servers(test);
-
+int to = 30;
         for (int i = 0; i < 2; i++)
         {
-            test.set_timeout(20);
+            test.set_timeout(to);
             test.maxscales->wait_for_monitor();
 
             int master_id = get_master_server_id(test);
 
             if (is_valid_server_id(test, master_id))
             {
-                test.set_timeout(20);
+                test.set_timeout(to);
                 cout << "\nStopping node: " << master_id << endl;
                 test.repl->stop_node(master_id - 1);
 
@@ -554,7 +554,7 @@ void run(TestConnections& test)
                 test.maxscales->wait_for_monitor();
                 list_servers(test);
 
-                test.set_timeout(20);
+                test.set_timeout(to);
                 test.maxscales->wait_for_monitor();
                 cout << "\nStarting node: " << master_id << endl;
                 test.repl->start_node(master_id - 1);
@@ -569,6 +569,7 @@ void run(TestConnections& test)
             {
                 test.expect(false, "Unexpected master id: %d", master_id);
             }
+	    test.stop_timeout();
         }
 
         test.maxscales->wait_for_monitor();
@@ -608,6 +609,7 @@ int main(int argc, char* argv[])
         test.repl->stash_server_settings(node);
         test.repl->add_server_setting(node, "rpl_semi_sync_master_enabled=ON");
         test.repl->add_server_setting(node, "rpl_semi_sync_slave_enabled=ON");
+	test.repl->add_server_setting(node, "rpl_semi_sync_master_wait_point=AFTER_SYNC");
     };
     auto restore_settings = [&test](int node) {
         test.repl->restore_server_settings(node);
