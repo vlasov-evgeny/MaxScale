@@ -1538,13 +1538,14 @@ int perform_normal_read(DCB* dcb, GWBUF* read_buffer, uint32_t nbytes_read)
         return 0;
     }
 
+    MySQLProtocol* proto = static_cast<MySQLProtocol*>(dcb->protocol_session());
+
     // The query classifier classifies according to the service's server that has the smallest version number
-    qc_set_server_version(service_get_version(session->service, SERVICE_VERSION_MIN));
+    qc_set_server_version(proto->version());
 
     /**
      * Feed each statement completely and separately to router.
      */
-    MySQLProtocol* proto = static_cast<MySQLProtocol*>(dcb->protocol_session());
     auto capabilities = service_get_capabilities(session->service);
     int rval = route_by_statement(proto, capabilities, &read_buffer) ? 0 : 1;
 

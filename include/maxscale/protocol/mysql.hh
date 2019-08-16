@@ -365,6 +365,11 @@ struct MySQLProtocol : public MXS_PROTOCOL_SESSION
         return m_session;
     }
 
+    uint64_t version() const
+    {
+        return m_version;
+    }
+
     int32_t do_routeQuery(GWBUF* buffer)
     {
         return m_component->routeQuery(buffer);
@@ -420,6 +425,8 @@ private:
 
     // Called by the protocol module when routing needs to be done
     mxs::Component* m_component;
+
+    uint64_t m_version;     // Numeric server version
 
     bool   consume_fetched_rows(GWBUF* buffer);
     void   process_reply_start(Iter it, Iter end);

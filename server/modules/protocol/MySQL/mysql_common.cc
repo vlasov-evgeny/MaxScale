@@ -1657,6 +1657,7 @@ MySQLProtocol::MySQLProtocol(MXS_SESSION* session, SERVER* server, mxs::Componen
     : m_session(session)
     , m_reply(server)
     , m_component(component)
+    , m_version(service_get_version(session->service, SERVICE_VERSION_MIN))
 {
 }
 
