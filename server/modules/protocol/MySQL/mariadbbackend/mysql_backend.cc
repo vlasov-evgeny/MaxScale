@@ -432,6 +432,7 @@ static int gw_read_backend_event(DCB* plain_dcb)
 
                 if (localq)
                 {
+                    localq = gwbuf_make_contiguous(localq);
                     /** Send the queued commands to the backend */
                     prepare_for_write(dcb, localq);
                     rc = backend_write_delayqueue(dcb, localq);
@@ -1128,6 +1129,7 @@ static int gw_MySQLWrite_backend(DCB* plain_dcb, GWBUF* queue)
                       dcb->fd(),
                       mxs::to_string(backend_protocol->protocol_auth_state));
 
+            queue = gwbuf_make_contiguous(queue);
             prepare_for_write(dcb, queue);
 
             if (backend_protocol->reply().command() == MXS_COM_CHANGE_USER)
